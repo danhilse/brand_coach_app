@@ -1,0 +1,249 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Act-On Colors - Primary */
+    --primary-base: #00babe;
+    --primary-hover: #08a2a5;
+    --primary-disabled: #99e3e5;
+    --white: #ffffff;
+    --text: #444444;
+    --text-light: #767676;
+    --link-text: #007b80;
+
+    /* Act-On Colors - Secondary */
+    --dark-blue-base: #304a71;
+    --app-background: #f7f9fb;
+    --dark-mode-text: #c1c9d4;
+    --border: #e3e3e3;
+    --table-hover-1: #f2fbfb;
+    --table-hover-2: #e5f9f9;
+
+    /* System Colors */
+    --alert-base: #f25656;
+    --success-base: #69b466;
+    --highlight-base: #fbffa3;
+    --warning-base: #ffcd00;
+
+    /* Map to shadcn variables */
+    --background: 0 0% 97%;
+    --foreground: 0 0% 27%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 27%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 27%;
+    --primary: 181 100% 37%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 41% 31%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 0 0% 96.1%;
+    --muted-foreground: 0 0% 46%;
+    --accent: 181 100% 94%;
+    --accent-foreground: 181 100% 37%;
+    --destructive: 0 77% 64%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 89%;
+    --input: 0 0% 89%;
+    --ring: 181 100% 37%;
+    --radius: 0.375rem;
+
+    --border-color: #e3e3e3; /* For direct color usage */
+    --table-hover-1-color: #f2fbfb; /* For direct color usage */
+  }
+  .dark {
+    --background: 0 0% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 0 0% 9%;
+    --secondary: 0 0% 14.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 0 0% 14.9%;
+    --muted-foreground: 0 0% 63.9%;
+    --accent: 0 0% 14.9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 14.9%;
+    --input: 0 0% 14.9%;
+    --ring: 0 0% 83.1%;
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    font-family: "Open Sans", sans-serif;
+    @apply bg-background text-foreground;
+  }
+  h1,
+  .h1 {
+    font-size: 28px;
+    line-height: 40px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  h2,
+  .h2 {
+    font-size: 24px;
+    line-height: 36px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  h3,
+  .h3 {
+    font-size: 18px;
+    line-height: 26px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  a {
+    color: var(--link-text);
+    font-weight: 600;
+    text-decoration: none;
+  }
+  a:hover {
+    text-decoration: underline;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+/* Act-On specific component styles */
+@layer components {
+  .btn-acton {
+    height: 36px;
+    padding: 8px 24px;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 14px;
+    transition: all 0.2s ease;
+  }
+  .btn-acton-primary {
+    background-color: var(--primary-base);
+    color: var(--white);
+  }
+  .btn-acton-primary:hover {
+    background-color: var(--primary-hover);
+  }
+  .btn-acton-primary:disabled {
+    background-color: var(--primary-disabled);
+    cursor: not-allowed;
+  }
+  .btn-acton-secondary {
+    background-color: transparent;
+    border: 1px solid var(--border);
+    color: var(--text);
+  }
+  .btn-acton-secondary:hover {
+    background-color: var(--table-hover-1);
+    border-color: var(--primary-base);
+  }
+  .container-acton {
+    max-width: 1400px;
+    width: 100%;
+    padding: 0;
+    margin: 0 auto;
+  }
+  @media (min-width: 640px) {
+    .container-acton {
+      padding: 0 24px;
+    }
+  }
+  .container-acton-full {
+    padding: 0 24px;
+    margin: 0 auto;
+  }
+}
+
+/* Add animations */
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+.loading-skeleton {
+  background: linear-gradient(90deg, var(--border-color) 0%, var(--table-hover-1-color) 50%, var(--border-color) 100%);
+  background-size: 1000px 100%;
+  animation: shimmer 2s infinite linear;
+}
+
+.loading-skeleton-simple {
+  background: var(--border);
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+
+/* Staggered child animations */
+.animate-fadeIn > *:nth-child(1) {
+  animation-delay: 0.1s;
+}
+
+.animate-fadeIn > *:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.animate-fadeIn > *:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+.animate-fadeIn > *:nth-child(4) {
+  animation-delay: 0.4s;
+}
+
+.animate-fadeIn > *:nth-child(5) {
+  animation-delay: 0.5s;
+}
+
