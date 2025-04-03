@@ -29,6 +29,7 @@ import VoiceAnalysis from "@/components/voice-analysis";
 import AudienceAnalysis from "@/components/audience-analysis";
 import MessagingAnalysis from "@/components/messaging-analysis";
 import OverallAnalysis from "@/components/overall-analysis";
+import { ModelSelector } from "@/components/ui/ModelSelector";
 import {
   Tooltip,
   TooltipContent,
@@ -37,12 +38,16 @@ import {
 } from "@/components/ui/tooltip";
 import { getMockAnalysisResults } from "@/lib/mock-data";
 import { motion, AnimatePresence } from "framer-motion";
+import { AIProvider } from "@/lib/providers";
 
 export default function Home() {
   const [content, setContent] = useState("");
   const [platform, setPlatform] = useState("website");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isGeneratingRecommendations, setIsGeneratingRecommendations] =
+    useState(false);
   const [analysisResults, setAnalysisResults] = useState<any>(null);
+  const [recommendations, setRecommendations] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState("overall");
   const [hasSearched, setHasSearched] = useState(false);
   const [demoMode, setDemoMode] = useState(true);
@@ -50,6 +55,7 @@ export default function Home() {
   const [activeSection, setActiveSection] = useState<"input" | "rewrites">(
     "input"
   );
+  const [aiProvider, setAiProvider] = useState<AIProvider>("anthropic");
   const contentRef = useRef<HTMLDivElement>(null);
   const rewritesRef = useRef<HTMLDivElement>(null);
   const demoToggleRef = useRef<HTMLDivElement>(null);
@@ -71,6 +77,10 @@ export default function Home() {
     setPlatform(value);
   };
 
+  const handleAiProviderChange = (value: AIProvider) => {
+    setAiProvider(value);
+  };
+
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -84,34 +94,54 @@ export default function Home() {
     reader.readAsText(file);
   };
 
+  // Update only the analyzeContent function for better error handling
   const analyzeContent = async () => {
     if (!content.trim()) return;
 
     setIsAnalyzing(true);
     setHasSearched(true);
+    // Clear any previous recommendations
+    setRecommendations([]);
 
     try {
       if (demoMode) {
         // Use mock data in demo mode
         await new Promise((resolve) => setTimeout(resolve, 2000)); // Simulate API delay
         const mockResults = getMockAnalysisResults(content, platform);
-        setAnalysisResults(mockResults);
+        // Destructure to remove contentRecommendations
+        const { contentRecommendations, ...analysisOnly } = mockResults;
+        setAnalysisResults(analysisOnly);
       } else {
         // Call the real API
-        const response = await fetch("/api/analyze", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ content, platform, demoMode }),
-        });
+        try {
+          const response = await fetch("/api/analyze", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              content,
+              platform,
+              demoMode,
+              provider: aiProvider,
+            }),
+          });
 
-        if (!response.ok) {
-          throw new Error("Analysis failed");
+          if (!response.ok) {
+            // Get the error details from the response if possible
+            const errorData = await response.json().catch(() => null);
+            const errorMessage =
+              errorData?.error ||
+              `API request failed with status ${response.status}`;
+            throw new Error(errorMessage);
+          }
+
+          const data = await response.json();
+          setAnalysisResults(data);
+        } catch (apiError) {
+          console.error("API Error:", apiError);
+          throw apiError; // Re-throw to be caught by the outer catch
         }
-
-        const data = await response.json();
-        setAnalysisResults(data);
       }
 
       setActiveTab("overall"); // Reset to first tab when new analysis is complete
@@ -124,6 +154,62 @@ export default function Home() {
       );
     } finally {
       setIsAnalyzing(false);
+    }
+  };
+
+  // New function to generate content recommendations
+  const generateRecommendations = async () => {
+    if (!analysisResults) return;
+
+    setIsGeneratingRecommendations(true);
+
+    try {
+      if (demoMode) {
+        // Use mock recommendations in demo mode
+        await new Promise((resolve) => setTimeout(resolve, 1500)); // Simulate API delay
+
+        // Import function dynamically to avoid circular imports
+        const { getMockRecommendations } = await import(
+          "../lib/mock-recommendations"
+        );
+        const mockRecommendations = getMockRecommendations(content, platform);
+        setRecommendations(mockRecommendations);
+      } else {
+        // Call the recommendations API
+        const response = await fetch("/api/recommendations", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            content,
+            platform,
+            analysis: analysisResults,
+            provider: aiProvider,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Generating recommendations failed");
+        }
+
+        const data = await response.json();
+        setRecommendations(data);
+      }
+
+      // Switch to the rewrites section once recommendations are generated
+      setActiveSection("rewrites");
+    } catch (error) {
+      console.error("Error generating recommendations:", error);
+      alert(
+        `Error: ${
+          error instanceof Error
+            ? error.message
+            : "Failed to generate recommendations"
+        }`
+      );
+    } finally {
+      setIsGeneratingRecommendations(false);
     }
   };
 
@@ -192,16 +278,38 @@ export default function Home() {
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-[var(--app-background)]">
-      {/* Demo mode toggle */}
-      <div className="absolute right-4 top-4 z-50 flex items-center space-x-2 rounded p-2">
+      {/* Demo mode and AI model toggles */}
+      <div className="absolute right-4 top-4 z-50 flex flex-col gap-2 items-end">
+        {/* AI Model Selector */}
+        <div className="flex items-center space-x-2 rounded p-2 bg-white/50 backdrop-blur-sm border border-gray-200">
+          <Label htmlFor="ai-model" className="text-sm text-muted-foreground">
+            AI Model
+          </Label>
+          <ModelSelector
+            value={aiProvider}
+            onChange={handleAiProviderChange}
+            disabled={isAnalyzing || demoMode}
+          />
+        </div>
+
+        {/* Demo mode toggle */}
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              <div ref={demoToggleRef} className="flex items-center space-x-2">
+              <div
+                ref={demoToggleRef}
+                className="flex items-center space-x-2 rounded p-2 bg-white/50 backdrop-blur-sm border border-gray-200"
+              >
                 <Switch
                   id="demo-mode"
                   checked={demoMode}
-                  onCheckedChange={setDemoMode}
+                  onCheckedChange={(checked) => {
+                    setDemoMode(checked);
+                    if (!checked) {
+                      // If turning off demo mode, set default provider
+                      setAiProvider("anthropic");
+                    }
+                  }}
                 />
                 <Label
                   htmlFor="demo-mode"
@@ -214,8 +322,8 @@ export default function Home() {
             </TooltipTrigger>
             <TooltipContent>
               <p>
-                Generate analysis examples instantly without calling the Claude
-                API
+                Generate analysis examples instantly without calling the AI API.
+                Disabling demo mode will use the selected AI model.
               </p>
             </TooltipContent>
           </Tooltip>
@@ -278,14 +386,23 @@ export default function Home() {
                     Input
                   </button>
                   <button
-                    onClick={() => toggleSection("rewrites")}
+                    onClick={() =>
+                      recommendations.length > 0
+                        ? toggleSection("rewrites")
+                        : generateRecommendations()
+                    }
                     className={`flex-1 py-2 px-4 text-sm font-medium border-b-2 transition-colors ${
                       activeSection === "rewrites"
                         ? "border-[var(--primary-base)] text-[var(--primary-base)]"
                         : "border-transparent text-[var(--text-light)] hover:text-[var(--text)]"
                     }`}
                   >
-                    Suggested Rewrites
+                    {recommendations.length > 0
+                      ? "Suggested Rewrites"
+                      : "Generate Rewrites"}
+                    {isGeneratingRecommendations && (
+                      <Loader2 className="ml-2 h-3 w-3 inline animate-spin" />
+                    )}
                   </button>
                 </div>
               )}
@@ -326,9 +443,6 @@ export default function Home() {
                           </label>
                         </div>
                         <div>
-                          {/* <label className="block text-sm font-medium mb-2 text-[var(--text)]">
-                            Platform/Channel
-                          </label> */}
                           <Select
                             value={platform}
                             onValueChange={handlePlatformChange}
@@ -371,7 +485,8 @@ export default function Home() {
                         {isAnalyzing ? (
                           <>
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Analyzing...
+                            Analyzing with {demoMode ? "Demo Mode" : aiProvider}
+                            ...
                           </>
                         ) : (
                           "Analyze Content"
@@ -390,9 +505,9 @@ export default function Home() {
                     className="overflow-y-auto"
                   >
                     <CardContent className="space-y-4 pt-4 max-h-[600px] overflow-y-auto">
-                      {analysisResults?.contentRecommendations?.length > 0 ? (
+                      {recommendations.length > 0 ? (
                         <div className="space-y-6 animate-fadeIn">
-                          {analysisResults.contentRecommendations.map(
+                          {recommendations.map(
                             (recommendation: any, index: number) => (
                               <div
                                 key={index}
@@ -487,11 +602,34 @@ export default function Home() {
                             )
                           )}
                         </div>
+                      ) : isGeneratingRecommendations ? (
+                        <div className="flex items-center justify-center py-16">
+                          <div className="text-center">
+                            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-[var(--primary-base)]" />
+                            <p className="text-[var(--text)]">
+                              Generating content recommendations...
+                            </p>
+                            <p className="text-sm text-[var(--text-light)] mt-2">
+                              {demoMode
+                                ? "Using demo mode"
+                                : `Using ${aiProvider} model`}
+                            </p>
+                          </div>
+                        </div>
                       ) : (
-                        <div className="text-center py-8 text-[var(--text-light)]">
-                          <p>No rewrite suggestions available yet.</p>
-                          <p className="text-sm mt-2">
-                            Analyze your content to get suggestions.
+                        <div className="text-center py-16 px-4">
+                          <p className="text-[var(--text)] mb-4">
+                            No rewrite suggestions available yet.
+                          </p>
+                          <Button
+                            onClick={generateRecommendations}
+                            className="btn-acton btn-acton-primary"
+                          >
+                            Generate Content Recommendations
+                          </Button>
+                          <p className="text-xs text-[var(--text-light)] mt-4">
+                            This will use AI to analyze your content and suggest
+                            improvements based on Act-On's brand guidelines.
                           </p>
                         </div>
                       )}
@@ -519,7 +657,7 @@ export default function Home() {
                     guidelines...
                   </p>
                   <p className="text-sm text-[var(--text-light)] mt-2">
-                    This may take a minute
+                    {demoMode ? "Using demo mode" : `Using ${aiProvider} model`}
                   </p>
                 </CardContent>
               </Card>
@@ -532,7 +670,7 @@ export default function Home() {
                   <CardDescription className="text-[var(--text-light)]">
                     Evaluation of your content against Act-On&apos;s brand
                     guidelines
-                    {demoMode && " (Demo Mode)"}
+                    {demoMode ? " (Demo Mode)" : ` (${aiProvider})`}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -592,9 +730,24 @@ export default function Home() {
                     </TabsContent>
                   </Tabs>
                 </CardContent>
-                <CardFooter className="border-t border-[var(--border-color)] pt-4 text-sm text-[var(--text-light)]">
-                  {/* Analysis based on Act-On&apos;s brand guidelines using Claude
-                  AI */}
+                <CardFooter className="border-t border-[var(--border-color)] pt-4 text-sm text-[var(--text-light)] flex justify-between items-center">
+                  <div>
+                    {demoMode
+                      ? "Demo mode - using mock data"
+                      : `Analysis powered by ${aiProvider}`}
+                  </div>
+                  {analysisResults &&
+                    !isGeneratingRecommendations &&
+                    recommendations.length === 0 && (
+                      <Button
+                        onClick={generateRecommendations}
+                        size="sm"
+                        variant="outline"
+                        className="text-xs"
+                      >
+                        Generate Recommendations
+                      </Button>
+                    )}
                 </CardFooter>
               </Card>
             ) : null}
