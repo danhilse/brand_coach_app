@@ -278,9 +278,8 @@ export default function Home() {
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-[var(--app-background)]">
-      {/* Demo mode and AI model toggles */}
-      <div className="absolute right-4 top-4 z-50 flex flex-col gap-2 items-end">
-        {/* AI Model Selector */}
+      {/* New container for AI Model Selector in the top left */}
+      <div className="absolute left-4 top-4 z-50">
         <div className="flex items-center space-x-2 rounded p-2 bg-white/50 backdrop-blur-sm border border-gray-200">
           <Label htmlFor="ai-model" className="text-sm text-muted-foreground">
             AI Model
@@ -291,8 +290,10 @@ export default function Home() {
             disabled={isAnalyzing || demoMode}
           />
         </div>
+      </div>
 
-        {/* Demo mode toggle */}
+      {/* Container for Demo mode toggle remains on the top right */}
+      <div className="absolute right-4 top-4 z-50">
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
